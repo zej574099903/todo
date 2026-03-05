@@ -19,7 +19,7 @@ export async function POST(request: Request) {
         }
 
         // Check if user exists
-        const existingUser = await User.findOne({ username });
+        const existingUser = await (User as any).findOne({ username });
         if (existingUser) {
             return NextResponse.json({ error: 'ALREADY_EXISTS' }, { status: 409 });
         }
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // Create user
-        const newUser = await User.create({
+        const newUser = await (User as any).create({
             username,
             email: email || undefined,
             password: hashedPassword,

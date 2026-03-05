@@ -14,7 +14,7 @@ export async function GET() {
         const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, username: string };
 
         await dbConnect();
-        const user = await User.findById(decoded.userId);
+        const user = await (User as any).findById(decoded.userId);
         if (!user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
 
         return NextResponse.json({ user: { id: user._id, username: user.username } });

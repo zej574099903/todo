@@ -28,7 +28,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         if (completed !== undefined) updateData.completed = completed;
         if (title) updateData.title = title;
 
-        const task = await Task.findOneAndUpdate(
+        const task = await (Task as any).findOneAndUpdate(
             { _id: params.id, userId: user.userId },
             updateData,
             { new: true }
@@ -48,7 +48,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
         await dbConnect();
 
-        const task = await Task.findOneAndDelete({ _id: params.id, userId: user.userId });
+        const task = await (Task as any).findOneAndDelete({ _id: params.id, userId: user.userId });
         if (!task) return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 });
 
         return NextResponse.json({ success: true });

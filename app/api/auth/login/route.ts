@@ -22,7 +22,7 @@ export async function POST(request: Request) {
         }
 
         // Find User
-        const user = await User.findOne({ username }).select('+password');
+        const user = await (User as any).findOne({ username }).select('+password');
         if (!user) {
             return NextResponse.json({ error: 'INVALID_CREDENTIALS' }, { status: 401 });
         }
