@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, LogOut, Trash2, Loader2, Filter, Settings } from 'lucide-react';
+import { Check, LogOut, Trash2, Loader2, Filter, Settings, PlayCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/components/LanguageProvider';
+import PomodoroTimer from '@/components/PomodoroTimer';
 import styles from './page.module.css';
 
 interface Task {
@@ -13,6 +14,7 @@ interface Task {
     completed: boolean;
     priority: 'high' | 'medium' | 'low' | 'none';
     category: string;
+    dueDate?: string;
     aiAdvice?: string;
 }
 
@@ -23,7 +25,60 @@ export default function TasksDashboard() {
     const [username, setUsername] = useState('User');
     const [tasks, setTasks] = useState<Task[]>([]);
     const [newTaskTitle, setNewTaskTitle] = useState('');
+
+    // Advanced Features State
+    const [isFocusMode, setIsFocusMode] = useState(false);
+    const [nlpParsed, setNlpParsed] = useState<{ title: string, category: string | null, priority: string | null, dueDate: Date | null }>({ title: '', category: null, priority: null, dueDate: null });
+
     const [isLoading, setIsLoading] = useState(true);
+
+    // --- NLP Parser ---
+    useEffect(() => {
+        const parseInput = (text: string) => {
+            let parsedTitle = text;
+            let category: string | null = null;
+            let priority: string | null = null;
+            let dueDate: Date | null = null;
+
+            // Extract Tags (#tagname)
+            const tagMatch = text.match(/#(\S+)/);
+            if (tagMatch) {
+                category = tagMatch[1];
+                parsedTitle = parsedTitle.replace(tagMatch[0], '');
+            }
+
+            // Extract Priority (!! for high, ! for medium)
+            if (text.includes('!!')) {
+                priority = 'high';
+                parsedTitle = parsedTitle.replace('!!', '');
+            } else if (text.includes('!')) {
+                priority = 'medium';
+                parsedTitle = parsedTitle.replace('!', '');
+            }
+
+            // Extract Date Mentions (simple keyword matching for demo)
+            const lowerText = text.toLowerCase();
+            const today = new Date();
+            if (lowerText.includes('tomorrow') || lowerText.includes('明天')) {
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                dueDate = tomorrow;
+                parsedTitle = parsedTitle.replace(/tomorrow|明天/i, '');
+            } else if (lowerText.includes('today') || lowerText.includes('今天')) {
+                dueDate = today;
+                parsedTitle = parsedTitle.replace(/today|今天/i, '');
+            }
+
+            setNlpParsed({
+                title: parsedTitle.trim().replace(/\s+/g, ' '),
+                category,
+                priority,
+                dueDate
+            });
+        };
+
+        parseInput(newTaskTitle);
+    }, [newTaskTitle]);
     const [isAdding, setIsAdding] = useState(false);
 
     // Filters state
@@ -38,6 +93,9 @@ export default function TasksDashboard() {
     const [modalError, setModalError] = useState('');
     const [modalSuccess, setModalSuccess] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+
+    // Pomodoro State
+    const [activePomodoroTask, setActivePomodoroTask] = useState<any | null>(null);
 
     // Fetch initial data
     useEffect(() => {
@@ -146,7 +204,12 @@ export default function TasksDashboard() {
                 const res = await fetch('/api/tasks', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title })
+                    body: JSON.stringify({
+                        title: nlpParsed.title || title,
+                        category: nlpParsed.category,
+                        priority: nlpParsed.priority,
+                        dueDate: nlpParsed.dueDate
+                    })
                 });
 
                 if (res.ok) {
@@ -187,58 +250,145 @@ export default function TasksDashboard() {
     };
 
     const categories = Array.from(new Set(tasks.map(t => t.category).filter(c => c && c !== 'Uncategorized')));
-    const filteredTasks = tasks.filter(task => {
-        if (filterPriority !== 'all' && task.priority !== filterPriority) return false;
-        if (filterCategory !== 'all' && task.category !== filterCategory) return false;
-        return true;
-    });
+
+    // --- Smart Focus Logic & Filtering ---
+    let filteredTasks = tasks.map(t => ({ ...t, dueDate: t.dueDate ? new Date(t.dueDate) : null }));
+
+    if (isFocusMode) {
+        // In Focus Mode, we only care about uncompleted tasks that matter most
+        filteredTasks = filteredTasks.filter(t => !t.completed);
+
+        // Complex Sort: Priority > Due Date (earliest first)
+        filteredTasks.sort((a, b) => {
+            const priorityWeight: Record<string, number> = { high: 3, medium: 2, low: 1, none: 0 };
+            const pA = priorityWeight[a.priority] || 0;
+            const pB = priorityWeight[b.priority] || 0;
+
+            if (pA !== pB) return pB - pA; // Higher priority first
+
+            if (a.dueDate && b.dueDate) {
+                return a.dueDate.getTime() - b.dueDate.getTime(); // Earliest due date first
+            }
+            if (a.dueDate) return -1;
+            if (b.dueDate) return 1;
+
+            return 0; // Fallback to creation order (default from DB)
+        });
+
+        // Take Top 3
+        filteredTasks = filteredTasks.slice(0, 3);
+    } else {
+        // Standard View Filters
+        filteredTasks = filteredTasks.filter(task => {
+            if (filterPriority !== 'all' && task.priority !== filterPriority) return false;
+            if (filterCategory !== 'all' && task.category !== filterCategory) return false;
+            return true;
+        });
+    }
 
     const remainingCount = tasks.filter(t => !t.completed).length;
 
-    if (isLoading) return null;
-
     return (
         <main className={styles.main}>
+            {/* Ambient Backgrounds */}
             <div className={styles.ambientGlow} />
 
-            <div className={styles.container}>
-                <header className={styles.header}>
-                    <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className={styles.greeting}
-                    >
+            {/* Left Sidebar */}
+            <motion.aside
+                initial={{ x: -320 }}
+                animate={{ x: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className={styles.sidebar}
+            >
+                <div className={styles.userProfile}>
+                    <div className={styles.avatarCircle}>
+                        {username.charAt(0).toUpperCase()}
+                    </div>
+                    <div className={styles.greeting}>
                         <h1>{t.tasks.greeting}{username}</h1>
                         <p className={styles.subtitle}>
                             {remainingCount === 0
                                 ? t.tasks.taskCount_zero
                                 : <>{t.tasks.taskCount_has}<strong>{remainingCount}</strong>{t.tasks.taskCount_tasks}</>}
                         </p>
-                    </motion.div>
-
-                    <div className={styles.headerActions}>
-                        <motion.button
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            onClick={() => setIsModalOpen(true)}
-                            className={styles.settingsBtn}
-                            title={(t.tasks as any).settings?.changePassword || "Change Password"}
-                        >
-                            <Settings size={18} />
-                        </motion.button>
-
-                        <motion.button
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            onClick={handleLogout}
-                            className={styles.signOutBtn}
-                        >
-                            <LogOut size={16} />
-                            {t.tasks.signOut}
-                        </motion.button>
                     </div>
-                </header>
+                </div>
 
+                <div className={styles.sidebarSections}>
+                    <div>
+                        <div className={styles.sectionTitle}>Views</div>
+                        <div
+                            className={`${styles.navItem} ${filterPriority === 'all' && filterCategory === 'all' ? styles.active : ''}`}
+                            onClick={() => { setFilterPriority('all'); setFilterCategory('all'); }}
+                        >
+                            <span>📝</span> All Tasks
+                        </div>
+                        <div
+                            className={`${styles.navItem} ${filterPriority === 'high' ? styles.active : ''}`}
+                            onClick={() => setFilterPriority('high')}
+                        >
+                            <span>🔥</span> High Priority
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className={styles.sectionTitle}>Categories</div>
+                        <div
+                            className={`${styles.navItem} ${filterCategory === 'Uncategorized' ? styles.active : ''}`}
+                            onClick={() => setFilterCategory('Uncategorized')}
+                        >
+                            <span>📁</span> Uncategorized
+                        </div>
+                        {categories.map(c => (
+                            <div
+                                key={c}
+                                className={`${styles.navItem} ${filterCategory === c ? styles.active : ''}`}
+                                onClick={() => setFilterCategory(c)}
+                            >
+                                <span>🏷️</span> {c}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className={styles.sidebarFooter}>
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className={styles.secondaryActionBtn}
+                    >
+                        <Settings size={18} />
+                        {(t.tasks as any).settings?.changePassword || "Account Settings"}
+                    </button>
+                    <button
+                        onClick={handleLogout}
+                        className={`${styles.secondaryActionBtn} ${styles.signOutBtn}`}
+                    >
+                        <LogOut size={18} />
+                        {t.tasks.signOut}
+                    </button>
+                </div>
+            </motion.aside>
+
+            {/* Main Content Area */}
+            <div className={styles.contentArea}>
+                <div className={styles.topBar}>
+                    <motion.h1
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={styles.pageTitle}
+                    >
+                        <span className="gradientText">{isFocusMode ? "Deep Focus" : "Today's Focus"}</span>
+                    </motion.h1>
+
+                    <button
+                        className={`${styles.focusBtn} ${isFocusMode ? styles.focusBtnActive : ''}`}
+                        onClick={() => setIsFocusMode(!isFocusMode)}
+                    >
+                        {isFocusMode ? '✨ Exit Focus' : '🎯 Smart Focus'}
+                    </button>
+                </div>
+
+                {/* Command Palette Input */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -248,7 +398,7 @@ export default function TasksDashboard() {
                     <input
                         type="text"
                         className={styles.taskInput}
-                        placeholder={isAdding ? (t.tasks as any).addingPlaceholder || "Adding..." : t.tasks.inputPlaceholder}
+                        placeholder={isAdding ? "Generating magic..." : "Press Enter to create a new task..."}
                         value={newTaskTitle}
                         onChange={(e) => setNewTaskTitle(e.target.value)}
                         onKeyDown={addTask}
@@ -260,49 +410,40 @@ export default function TasksDashboard() {
                             <Loader2 size={24} />
                         </div>
                     )}
+                    {/* NLP Real-time Visual Feedback */}
+                    <AnimatePresence>
+                        {(nlpParsed.category || nlpParsed.priority || nlpParsed.dueDate) && !isAdding && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className={styles.nlpFeedbackRow}
+                            >
+                                <span className={styles.nlpHint}>✨ Auto-detected:</span>
+                                {nlpParsed.category && (
+                                    <span className={styles.nlpTag}>🏷️ {nlpParsed.category}</span>
+                                )}
+                                {nlpParsed.priority && (
+                                    <span className={`${styles.nlpTag} ${styles['priority_' + nlpParsed.priority]}`}>
+                                        {(t.tasks as any).priority?.[nlpParsed.priority] || nlpParsed.priority}
+                                    </span>
+                                )}
+                                {nlpParsed.dueDate && (
+                                    <span className={styles.nlpTag}>📅 {nlpParsed.dueDate.toLocaleDateString()}</span>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
 
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.15 }}
-                    style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px' }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'rgba(255,255,255,0.4)', fontSize: '14px', marginLeft: '4px' }}>
-                        <Filter size={14} />
-                    </div>
-                    <select
-                        value={filterPriority}
-                        onChange={e => setFilterPriority(e.target.value)}
-                        style={{ background: 'rgba(20, 20, 25, 0.6)', color: 'var(--text-secondary)', padding: '6px 12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', outline: 'none', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                        <option value="all">{(t.tasks as any).filters?.allPriorities || 'All Priorities'}</option>
-                        <option value="high">{(t.tasks as any).priority?.high || 'High'}</option>
-                        <option value="medium">{(t.tasks as any).priority?.medium || 'Medium'}</option>
-                        <option value="low">{(t.tasks as any).priority?.low || 'Low'}</option>
-                        <option value="none">{(t.tasks as any).priority?.none || 'Normal'}</option>
-                    </select>
-
-                    <select
-                        value={filterCategory}
-                        onChange={e => setFilterCategory(e.target.value)}
-                        style={{ background: 'rgba(20, 20, 25, 0.6)', color: 'var(--text-secondary)', padding: '6px 12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', outline: 'none', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                        <option value="all">{(t.tasks as any).filters?.allCategories || 'All Categories'}</option>
-                        <option value="Uncategorized">未分类 / Uncategorized</option>
-                        {categories.map(c => (
-                            <option key={c} value={c}>{c}</option>
-                        ))}
-                    </select>
-                </motion.div>
-
+                {/* Tasks Masonry/Grid View */}
                 <motion.div
                     className={styles.tasksList}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
                 >
-                    <AnimatePresence mode="popLayout">
+                    <AnimatePresence>
                         {filteredTasks.length === 0 ? (
                             <motion.div
                                 key="empty-state"
@@ -311,57 +452,75 @@ export default function TasksDashboard() {
                                 exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.1 } }}
                                 className={styles.emptyState}
                             >
-                                {t.tasks.emptyState}
+                                <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.8 }}>✨</div>
+                                {t.tasks.emptyState || "Your space is clear. What's next?"}
                             </motion.div>
                         ) : (
-                            filteredTasks.map((task) => (
+                            filteredTasks.map((task, index) => (
                                 <motion.div
                                     key={task._id}
                                     layout
-                                    initial={{ opacity: 0, scale: 0.95, y: -20 }}
+                                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95, x: 50, transition: { duration: 0.2 } }}
-                                    transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 25 }}
-                                    className={styles.taskCard}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    transition={{ duration: 0.4, type: "spring", stiffness: 300, damping: 25, delay: index * 0.05 }}
+                                    className={styles.taskCardWrapper}
                                 >
-                                    <div
-                                        className={`${styles.checkbox} ${task.completed ? styles.completed : ''}`}
-                                        onClick={() => toggleTask(task._id, task.completed)}
-                                    >
-                                        <motion.div
-                                            initial={false}
-                                            animate={{ scale: task.completed ? 1 : 0 }}
-                                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                        >
-                                            <Check size={14} color="#000" strokeWidth={3} />
-                                        </motion.div>
-                                    </div>
+                                    <div className={styles.taskCard}>
+                                        <div className={styles.taskCardHeader}>
+                                            <div
+                                                className={`${styles.checkbox} ${task.completed ? styles.completed : ''}`}
+                                                onClick={() => toggleTask(task._id, task.completed)}
+                                            >
+                                                <motion.div
+                                                    initial={false}
+                                                    animate={{ scale: task.completed ? 1 : 0 }}
+                                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                                >
+                                                    <Check size={16} color="#ffffff" strokeWidth={3} />
+                                                </motion.div>
+                                            </div>
 
-                                    <div className={styles.taskContent}>
-                                        <span className={`${styles.taskTitle} ${task.completed ? styles.completedText : ''}`}>
-                                            {task.title}
-                                        </span>
-
-                                        <div className={styles.taskMeta}>
-                                            {task.priority !== 'none' && (
-                                                <span className={`${styles.tag} ${styles['priority_' + task.priority]}`}>
-                                                    {(t.tasks as any).priority?.[task.priority] || task.priority}
+                                            <div className={styles.taskContent}>
+                                                <span className={`${styles.taskTitle} ${task.completed ? styles.completedText : ''}`}>
+                                                    {task.title}
                                                 </span>
-                                            )}
 
-                                            {task.category && task.category !== 'Uncategorized' && (
-                                                <span className={styles.tag}>🏷️ {task.category}</span>
-                                            )}
+                                                {task.aiAdvice && (
+                                                    <div className={styles.aiTip}>
+                                                        {task.aiAdvice}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
 
-                                            {task.aiAdvice && (
-                                                <span className={styles.aiTip}>✨ {task.aiAdvice}</span>
-                                            )}
+                                        <div className={styles.taskBottomRow}>
+                                            <div className={styles.taskMeta}>
+                                                <button
+                                                    className={styles.pomodoroPlayBtn}
+                                                    onClick={() => setActivePomodoroTask(task)}
+                                                    title="Start Focus Timer"
+                                                >
+                                                    <PlayCircle size={18} />
+                                                    <span>Focus</span>
+                                                </button>
+
+                                                {task.priority !== 'none' && (
+                                                    <span className={`${styles.tag} ${styles['priority_' + task.priority]}`}>
+                                                        {(t.tasks as any).priority?.[task.priority] || task.priority}
+                                                    </span>
+                                                )}
+
+                                                {task.category && task.category !== 'Uncategorized' && (
+                                                    <span className={styles.tag}>{task.category}</span>
+                                                )}
+                                            </div>
+
+                                            <button className={styles.deleteBtn} onClick={() => deleteTask(task._id)}>
+                                                <Trash2 size={18} />
+                                            </button>
                                         </div>
                                     </div>
-
-                                    <button className={styles.deleteBtn} onClick={() => deleteTask(task._id)}>
-                                        <Trash2 size={18} />
-                                    </button>
                                 </motion.div>
                             ))
                         )}
@@ -369,6 +528,7 @@ export default function TasksDashboard() {
                 </motion.div>
             </div>
 
+            {/* Glass Modal for Settings */}
             <AnimatePresence>
                 {isModalOpen && (
                     <motion.div
@@ -443,6 +603,16 @@ export default function TasksDashboard() {
                             </div>
                         </motion.div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Full Screen Pomodoro Overlay */}
+            <AnimatePresence>
+                {activePomodoroTask && (
+                    <PomodoroTimer
+                        task={activePomodoroTask}
+                        onClose={() => setActivePomodoroTask(null)}
+                    />
                 )}
             </AnimatePresence>
         </main>

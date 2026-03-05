@@ -34,14 +34,14 @@ export async function POST(request: Request) {
         const user = authenticate();
         if (!user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
 
-        const { title } = await request.json();
+        const { title, category: reqCategory, priority: reqPriority, dueDate } = await request.json();
         if (!title || !title.trim()) {
             return NextResponse.json({ error: 'REQUIRED' }, { status: 400 });
         }
 
-        // Return a task immediately with default empty AI values
-        let priority = 'none';
-        let category = 'Uncategorized';
+        // Use NLP extracted values if they exist, otherwise fallback
+        let priority = reqPriority || 'none';
+        let category = reqCategory || 'Uncategorized';
         let aiAdvice = '';
 
         await dbConnect();
@@ -51,6 +51,7 @@ export async function POST(request: Request) {
             completed: false,
             priority,
             category,
+            dueDate: dueDate || null,
             aiAdvice
         });
 

@@ -1,54 +1,129 @@
 .main {
+    --neon-accent: #ff9f43;
+    --neon-glow: rgba(255, 159, 67, 0.4);
+    --bg-card: #ffffff;
+    --text-primary: #333333;
+    --text-secondary: #6c757d;
+    --border-glass: rgba(255, 255, 255, 0.8);
     position: relative;
     min-height: 100vh;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
+    background-color: #f7f9fc;
     overflow: hidden;
 }
 
-.ambientGlow {
+.leftPanel {
+    flex: 1.2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #fff9e6 0%, #ffeaa7 100%);
+    position: relative;
+    overflow: hidden;
+    padding: 40px;
+    z-index: 1;
+}
+
+.leftPanel::before {
+    content: '';
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 60vw;
-    height: 60vw;
-    max-width: 600px;
-    max-height: 600px;
-    background: radial-gradient(circle, rgba(0, 240, 255, 0.15) 0%, transparent 60%);
-    z-index: 0;
-    pointer-events: none;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(255, 159, 67, 0.1) 0%, transparent 70%);
+    top: -100px;
+    left: -100px;
+    border-radius: 50%;
+    z-index: -1;
+}
+
+.leftPanel::after {
+    content: '';
+    position: absolute;
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(255, 211, 42, 0.15) 0%, transparent 70%);
+    bottom: -200px;
+    right: -200px;
+    border-radius: 50%;
+    z-index: -1;
+}
+
+.avatarIsland {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 15px 25px rgba(255, 159, 67, 0.2));
+}
+
+.welcomeText {
+    text-align: center;
+    color: #4a4a4a;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.welcomeText h1 {
+    font-size: 52px;
+    font-weight: 900;
+    margin-bottom: 16px;
+    letter-spacing: -1.5px;
+    background: linear-gradient(135deg, #ff9f43 0%, #ff6b81 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0px 4px 15px rgba(255, 159, 67, 0.2);
+}
+
+.welcomeText p {
+    font-size: 18px;
+    font-weight: 500;
+    color: #636e72;
+    letter-spacing: 0.5px;
+}
+
+.rightPanel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Soft premium mesh gradient instead of solid white */
+    background: radial-gradient(circle at top right, #fff5f5 0%, #ffffff 40%, #f4f7fb 100%);
+    padding: 24px;
+    box-shadow: -15px 0 40px rgba(0, 0, 0, 0.05);
+    z-index: 2;
+    position: relative;
+}
+
+.rightPanel::before {
+    content: '';
+    position: absolute;
+    top: 10%;
+    right: 5%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255, 159, 67, 0.05) 0%, transparent 60%);
+    border-radius: 50%;
+    z-index: -1;
 }
 
 .loginContainer {
-    position: relative;
-    z-index: 10;
     width: 100%;
     max-width: 440px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-}
-
-.avatarSection {
-    margin-bottom: -40px;
-    z-index: 20;
-    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.5));
-    transition: transform 0.3s ease;
 }
 
 .glassCard {
     width: 100%;
-    background: var(--bg-card);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--border-glass);
-    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 1);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 1);
+    border-radius: 28px;
     padding: 48px 40px 40px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    transition: padding 0.3s ease;
 }
 
 .cardHeader {
@@ -56,18 +131,11 @@
     margin-bottom: 32px;
 }
 
-.cardHeader h1 {
+.cardHeader h2 {
     font-size: 28px;
     font-weight: 700;
-    background: linear-gradient(to right, #fff, var(--text-secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #2d3436;
     margin-bottom: 8px;
-}
-
-.subtitle {
-    color: var(--text-secondary);
-    font-size: 14px;
 }
 
 .form {
@@ -90,34 +158,41 @@
 .inputIcon {
     position: absolute;
     left: 16px;
-    color: var(--text-secondary);
+    color: #636e72;
+    /* Darkened from #b2bec3 for better visibility */
     transition: color 0.3s ease;
+    opacity: 0.8;
 }
 
 .input {
     width: 100%;
-    background: rgba(10, 12, 18, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    padding: 14px 14px 14px 44px;
-    color: var(--text-primary);
+    background: rgba(248, 249, 250, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    border-radius: 16px;
+    padding: 16px 16px 16px 48px;
+    color: #2d3436;
     font-size: 15px;
     transition: all 0.3s ease;
     outline: none;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .input::placeholder {
-    color: rgba(255, 255, 255, 0.3);
+    color: #8a969c;
+    /* Darkened for better readability */
+    font-weight: 500;
 }
 
 .input:focus {
-    border-color: var(--neon-accent);
-    background: rgba(10, 12, 18, 0.8);
-    box-shadow: 0 0 0 1px var(--neon-accent);
+    border-color: rgba(255, 159, 67, 0.6);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 4px rgba(255, 159, 67, 0.1);
 }
 
 .inputWrapper:focus-within .inputIcon {
-    color: var(--neon-accent);
+    color: #ff9f43;
 }
 
 .forgotPassword {
@@ -126,68 +201,89 @@
 }
 
 .forgotPassword a {
-    color: var(--text-secondary);
+    color: #636e72;
     font-size: 13px;
     transition: color 0.2s;
+    font-weight: 600;
 }
 
 .forgotPassword a:hover {
-    color: var(--neon-accent);
+    color: #ff9f43;
+}
+
+.loginButton {
+    background: rgba(255, 159, 67, 0.15) !important;
+    color: #ff9f43 !important;
+    border: 1px solid rgba(255, 159, 67, 0.4) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    box-shadow: 0 8px 20px rgba(255, 159, 67, 0.15) !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+    transition: all 0.3s ease !important;
+}
+
+.loginButton:hover {
+    background: rgba(255, 159, 67, 0.9) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 159, 67, 1) !important;
+    box-shadow: 0 12px 25px rgba(255, 159, 67, 0.35) !important;
+    transform: translateY(-2px);
 }
 
 .footer {
     margin-top: 32px;
     text-align: center;
-    color: var(--text-secondary);
+    color: #636e72;
     font-size: 14px;
+    font-weight: 500;
 }
 
 .link {
-    color: var(--neon-accent);
-    font-weight: 500;
-    margin-left: 4px;
-    transition: text-shadow 0.2s;
+    color: #ff9f43;
+    font-weight: 700;
+    margin-left: 6px;
+    transition: color 0.2s;
 }
 
 .link:hover {
-    text-shadow: 0 0 8px var(--neon-glow);
+    color: #ff7f11;
 }
 
 /* Mobile Optimizations */
-@media (max-width: 600px) {
+@media (max-width: 900px) {
     .main {
-        padding: 16px;
+        flex-direction: column;
     }
 
-    .ambientGlow {
-        width: 90vw;
-        height: 90vw;
+    .leftPanel {
+        flex: none;
+        padding: 40px 24px;
+        min-height: 45vh;
+        border-bottom-left-radius: 30px;
+        border-bottom-right-radius: 30px;
+        box-shadow: 0 10px 30px rgba(255, 159, 67, 0.2);
+    }
+
+    .welcomeText h1 {
+        font-size: 36px;
+    }
+
+    .welcomeText p {
+        font-size: 16px;
+    }
+
+    .rightPanel {
+        padding: 40px 24px;
+        background-color: transparent;
+        box-shadow: none;
     }
 
     .glassCard {
-        padding: 40px 24px 32px;
-        border-radius: 20px;
-    }
-
-    .cardHeader h1 {
-        font-size: 24px;
-    }
-
-    .avatarSection {
-        margin-bottom: -32px;
-        transform: scale(0.85);
-        /* Slightly smaller avatar */
-        transform-origin: bottom center;
-    }
-
-    .input {
-        padding: 12px 14px 12px 40px;
-        font-size: 14px;
-    }
-
-    .inputIcon {
-        left: 14px;
-        width: 18px;
-        height: 18px;
+        padding: 32px 24px 24px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
     }
 }
