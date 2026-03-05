@@ -1,0 +1,193 @@
+.main {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow: hidden;
+}
+
+.ambientGlow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60vw;
+    height: 60vw;
+    max-width: 600px;
+    max-height: 600px;
+    background: radial-gradient(circle, rgba(0, 240, 255, 0.15) 0%, transparent 60%);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.loginContainer {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 440px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.avatarSection {
+    margin-bottom: -40px;
+    z-index: 20;
+    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.5));
+    transition: transform 0.3s ease;
+}
+
+.glassCard {
+    width: 100%;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glass);
+    border-radius: 24px;
+    padding: 48px 40px 40px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    transition: padding 0.3s ease;
+}
+
+.cardHeader {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.cardHeader h1 {
+    font-size: 28px;
+    font-weight: 700;
+    background: linear-gradient(to right, #fff, var(--text-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.inputWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.inputIcon {
+    position: absolute;
+    left: 16px;
+    color: var(--text-secondary);
+    transition: color 0.3s ease;
+}
+
+.input {
+    width: 100%;
+    background: rgba(10, 12, 18, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 14px 14px 14px 44px;
+    color: var(--text-primary);
+    font-size: 15px;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.input:focus {
+    border-color: var(--neon-accent);
+    background: rgba(10, 12, 18, 0.8);
+    box-shadow: 0 0 0 1px var(--neon-accent);
+}
+
+.inputWrapper:focus-within .inputIcon {
+    color: var(--neon-accent);
+}
+
+.forgotPassword {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.forgotPassword a {
+    color: var(--text-secondary);
+    font-size: 13px;
+    transition: color 0.2s;
+}
+
+.forgotPassword a:hover {
+    color: var(--neon-accent);
+}
+
+.footer {
+    margin-top: 32px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.link {
+    color: var(--neon-accent);
+    font-weight: 500;
+    margin-left: 4px;
+    transition: text-shadow 0.2s;
+}
+
+.link:hover {
+    text-shadow: 0 0 8px var(--neon-glow);
+}
+
+/* Mobile Optimizations */
+@media (max-width: 600px) {
+    .main {
+        padding: 16px;
+    }
+
+    .ambientGlow {
+        width: 90vw;
+        height: 90vw;
+    }
+
+    .glassCard {
+        padding: 40px 24px 32px;
+        border-radius: 20px;
+    }
+
+    .cardHeader h1 {
+        font-size: 24px;
+    }
+
+    .avatarSection {
+        margin-bottom: -32px;
+        transform: scale(0.85);
+        /* Slightly smaller avatar */
+        transform-origin: bottom center;
+    }
+
+    .input {
+        padding: 12px 14px 12px 40px;
+        font-size: 14px;
+    }
+
+    .inputIcon {
+        left: 14px;
+        width: 18px;
+        height: 18px;
+    }
+}

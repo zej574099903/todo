@@ -1,0 +1,54 @@
+.button {
+    position: relative;
+    background: linear-gradient(135deg, rgba(8, 10, 15, 0.8), rgba(20, 24, 35, 0.9));
+    color: var(--text-primary);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    padding: 14px 28px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.5),
+        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.button:hover {
+    border-color: var(--neon-accent);
+    box-shadow:
+        0 0 20px var(--neon-glow),
+        inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.glow {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(to right,
+            transparent,
+            rgba(255, 255, 255, 0.1),
+            transparent);
+    transform: skewX(-20deg);
+    transition: 0.5s;
+}
+
+.button:hover .glow {
+    left: 150%;
+    transition: 0.7s ease-in-out;
+}
+
+.content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
