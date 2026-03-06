@@ -20,7 +20,7 @@ export default function RegisterPage() {
     const [isSuccess, setIsSuccess] = useState(false);
 
     const [isTyping, setIsTyping] = useState<boolean>(false);
-    const typingTimeoutRef = React.useRef<NodeJS.Timeout | undefined>();
+    const typingTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
 
     const handleTyping = (setter: React.Dispatch<React.SetStateAction<string>>, value: string) => {
         setter(value);

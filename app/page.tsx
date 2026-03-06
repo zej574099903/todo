@@ -19,7 +19,7 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [isTyping, setIsTyping] = useState<boolean>(false);
-    const typingTimeoutRef = useRef<NodeJS.Timeout | undefined>();
+    const typingTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
     const handleTyping = (setter: React.Dispatch<React.SetStateAction<string>>, value: string) => {
         setter(value);
