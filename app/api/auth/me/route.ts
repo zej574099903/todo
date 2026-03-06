@@ -17,7 +17,7 @@ export async function GET() {
         const user = await (User as any).findById(decoded.userId);
         if (!user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
 
-        return NextResponse.json({ user: { id: user._id, username: user.username } });
+        return NextResponse.json({ user: { id: user._id, username: user.username, email: user.email || '' } });
     } catch (error) {
         return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
     }

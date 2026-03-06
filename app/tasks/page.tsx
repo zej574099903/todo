@@ -97,6 +97,12 @@ export default function TasksDashboard() {
     // Pomodoro State
     const [activePomodoroTask, setActivePomodoroTask] = useState<any | null>(null);
 
+    // Email Reminder State
+    const [userEmail, setUserEmail] = useState('');
+    const [isEmailSaving, setIsEmailSaving] = useState(false);
+    const [emailSuccess, setEmailSuccess] = useState('');
+    const [emailError, setEmailError] = useState('');
+
     // Fetch initial data
     useEffect(() => {
         const init = async () => {
@@ -109,6 +115,7 @@ export default function TasksDashboard() {
                 if (!userRes.ok) throw new Error('Not authenticated');
                 const userData = await userRes.json();
                 setUsername(userData.user.username);
+                setUserEmail(userData.user.email || '');
 
                 if (tasksRes.ok) {
                     const tasksData = await tasksRes.json();
@@ -143,6 +150,29 @@ export default function TasksDashboard() {
     const handleLogout = () => {
         document.cookie = 'token=; Max-Age=0; path=/;';
         router.push('/');
+    };
+
+    const handleSaveEmail = async () => {
+        setEmailError('');
+        setEmailSuccess('');
+        if (!userEmail.trim() || !/^[\w.-]+@[\w.-]+\.\w{2,}$/.test(userEmail)) {
+            setEmailError('请输入有效的邮箱地址');
+            return;
+        }
+        setIsEmailSaving(true);
+        try {
+            const res = await fetch('/api/auth/me/email', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: userEmail })
+            });
+            if (res.ok) {
+                setEmailSuccess('✅ 邮箱保存成功！到期前1小时会自动提醒您');
+            } else {
+                setEmailError('保存失败，请重试');
+            }
+        } catch { setEmailError('网络错误，请重试'); }
+        finally { setIsEmailSaving(false); }
     };
 
     const handleSavePassword = async () => {
@@ -544,62 +574,97 @@ export default function TasksDashboard() {
                             transition={{ type: "spring", stiffness: 300, damping: 25 }}
                             className={styles.modal}
                         >
-                            <h2 className={styles.modalTitle}>{(t.tasks as any).settings?.changePassword || "Change Password"}</h2>
+                            <h2 className={styles.modalTitle}>⚙️ Account Settings</h2>
 
-                            {modalError && <div className={styles.errorMessage}>{modalError}</div>}
-                            {modalSuccess && <div className={styles.successMessage}>{modalSuccess}</div>}
+                            {/* --- Email Reminder Section --- */}
+                            <div className={styles.modalSection}>
+                                <div className={styles.sectionDividerLabel}>📬 提醒邮箱</div>
+                                <p className={styles.sectionHint}>设置后，任务到期前 1 小时将自动发送邮件提醒</p>
 
-                            <div className={styles.inputGroup}>
-                                <label className={styles.modalLabel}>{(t.tasks as any).settings?.currentPassword || "Current Password"}</label>
-                                <input
-                                    type="password"
-                                    className={styles.modalInput}
-                                    value={currentPassword}
-                                    onChange={e => setCurrentPassword(e.target.value)}
-                                />
+                                {emailError && <div className={styles.errorMessage}>{emailError}</div>}
+                                {emailSuccess && <div className={styles.successMessage}>{emailSuccess}</div>}
+
+                                <div className={styles.inputGroup}>
+                                    <label className={styles.modalLabel}>提醒邮箱</label>
+                                    <div style={{ display: 'flex', gap: '12px' }}>
+                                        <input
+                                            type="email"
+                                            className={styles.modalInput}
+                                            placeholder="your@email.com"
+                                            value={userEmail}
+                                            onChange={e => { setUserEmail(e.target.value); setEmailSuccess(''); setEmailError(''); }}
+                                        />
+                                        <button
+                                            className={`${styles.modalBtn} ${styles.modalBtnSave}`}
+                                            onClick={handleSaveEmail}
+                                            disabled={isEmailSaving}
+                                            style={{ minWidth: '80px', flexShrink: 0 }}
+                                        >
+                                            {isEmailSaving ? <Loader2 size={16} style={{ animation: 'taskLoaderSpin 1s linear infinite' }} /> : '保存'}
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className={styles.inputGroup}>
-                                <label className={styles.modalLabel}>{(t.tasks as any).settings?.newPassword || "New Password"}</label>
-                                <input
-                                    type="password"
-                                    className={styles.modalInput}
-                                    value={newPassword}
-                                    onChange={e => setNewPassword(e.target.value)}
-                                />
-                            </div>
+                            {/* --- Password Section --- */}
+                            <div className={styles.modalSection}>
+                                <div className={styles.sectionDividerLabel}>🔐 修改密码</div>
+                                {modalError && <div className={styles.errorMessage}>{modalError}</div>}
+                                {modalSuccess && <div className={styles.successMessage}>{modalSuccess}</div>}
 
-                            <div className={styles.inputGroup}>
-                                <label className={styles.modalLabel}>{(t.tasks as any).settings?.confirmPassword || "Confirm New Password"}</label>
-                                <input
-                                    type="password"
-                                    className={styles.modalInput}
-                                    value={confirmPassword}
-                                    onChange={e => setConfirmPassword(e.target.value)}
-                                />
-                            </div>
 
-                            <div className={styles.modalActions}>
-                                <button
-                                    className={`${styles.modalBtn} ${styles.modalBtnCancel}`}
-                                    onClick={() => {
-                                        setIsModalOpen(false);
-                                        setModalError('');
-                                        setModalSuccess('');
-                                        setCurrentPassword('');
-                                        setNewPassword('');
-                                        setConfirmPassword('');
-                                    }}
-                                >
-                                    {(t.tasks as any).settings?.cancel || "Cancel"}
-                                </button>
-                                <button
-                                    className={`${styles.modalBtn} ${styles.modalBtnSave}`}
-                                    onClick={handleSavePassword}
-                                    disabled={isSaving}
-                                >
-                                    {isSaving ? <Loader2 size={18} className={styles.inputSpinner} style={{ position: 'static', animation: 'taskLoaderSpin 1s linear infinite', margin: '0 auto' }} /> : ((t.tasks as any).settings?.save || "Save")}
-                                </button>
+                                <div className={styles.inputGroup}>
+                                    <label className={styles.modalLabel}>{(t.tasks as any).settings?.currentPassword || "Current Password"}</label>
+                                    <input
+                                        type="password"
+                                        className={styles.modalInput}
+                                        value={currentPassword}
+                                        onChange={e => setCurrentPassword(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className={styles.inputGroup}>
+                                    <label className={styles.modalLabel}>{(t.tasks as any).settings?.newPassword || "New Password"}</label>
+                                    <input
+                                        type="password"
+                                        className={styles.modalInput}
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className={styles.inputGroup}>
+                                    <label className={styles.modalLabel}>{(t.tasks as any).settings?.confirmPassword || "Confirm New Password"}</label>
+                                    <input
+                                        type="password"
+                                        className={styles.modalInput}
+                                        value={confirmPassword}
+                                        onChange={e => setConfirmPassword(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className={styles.modalActions}>
+                                    <button
+                                        className={`${styles.modalBtn} ${styles.modalBtnCancel}`}
+                                        onClick={() => {
+                                            setIsModalOpen(false);
+                                            setModalError('');
+                                            setModalSuccess('');
+                                            setCurrentPassword('');
+                                            setNewPassword('');
+                                            setConfirmPassword('');
+                                        }}
+                                    >
+                                        {(t.tasks as any).settings?.cancel || "Cancel"}
+                                    </button>
+                                    <button
+                                        className={`${styles.modalBtn} ${styles.modalBtnSave}`}
+                                        onClick={handleSavePassword}
+                                        disabled={isSaving}
+                                    >
+                                        {isSaving ? <Loader2 size={18} className={styles.inputSpinner} style={{ position: 'static', animation: 'taskLoaderSpin 1s linear infinite', margin: '0 auto' }} /> : ((t.tasks as any).settings?.save || "Save")}
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>
