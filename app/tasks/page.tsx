@@ -6,7 +6,12 @@ import { Check, LogOut, Trash2, Loader2, Filter, Settings, PlayCircle } from 'lu
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/components/LanguageProvider';
 import PomodoroTimer from '@/components/PomodoroTimer';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import { zhCN } from 'date-fns/locale/zh-CN';
+import 'react-datepicker/dist/react-datepicker.css';
 import styles from './page.module.css';
+
+registerLocale('zh-CN', zhCN);
 
 interface Task {
     _id: string;
@@ -32,7 +37,7 @@ export default function TasksDashboard() {
     const [isFocusMode, setIsFocusMode] = useState(false);
     const [nlpParsed, setNlpParsed] = useState<{ title: string, category: string | null, priority: string | null, dueDate: Date | null }>({ title: '', category: null, priority: null, dueDate: null });
     const [isReminderEnabled, setIsReminderEnabled] = useState(false);
-    const [reminderTime, setReminderTime] = useState('');
+    const [reminderTime, setReminderTime] = useState<Date | null>(null);
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -264,7 +269,7 @@ export default function TasksDashboard() {
                         priority: nlpParsed.priority,
                         dueDate: nlpParsed.dueDate,
                         isReminderEnabled: isReminderEnabled,
-                        reminderTime: (isReminderEnabled && reminderTime) ? new Date(reminderTime) : null
+                        reminderTime: (isReminderEnabled && reminderTime) ? reminderTime : null
                     })
                 });
 
@@ -273,7 +278,7 @@ export default function TasksDashboard() {
                     setTasks([newTask, ...tasks]);
                     setNewTaskTitle('');
                     setIsReminderEnabled(false);
-                    setReminderTime('');
+                    setReminderTime(null);
                     setFilterPriority('all');
                     setFilterCategory('all');
                 }
@@ -479,13 +484,20 @@ export default function TasksDashboard() {
                                 {isReminderEnabled ? '🔔' : '🔕'}
                             </button>
                             {isReminderEnabled && (
-                                <input
-                                    type="datetime-local"
+                                <DatePicker
+                                    selected={reminderTime}
+                                    onChange={(date: Date | null) => setReminderTime(date)}
+                                    showTimeSelect
+                                    timeFormat="HH:mm"
+                                    timeIntervals={15}
+                                    timeCaption="时间"
+                                    dateFormat="yyyy/MM/dd HH:mm"
+                                    minDate={new Date()}
+                                    locale="zh-CN"
+                                    placeholderText="选择时间 (可选)"
                                     className={`${styles.manualDateInput} ${styles.reminderTimeInput}`}
-                                    value={reminderTime}
-                                    onChange={(e) => setReminderTime(e.target.value)}
                                     disabled={isAdding}
-                                    title="选择提醒发送时间"
+                                    wrapperClassName={styles.datePickerWrapper}
                                 />
                             )}
                         </div>
@@ -679,11 +691,19 @@ export default function TasksDashboard() {
                                             style={{ marginTop: '16px', overflow: 'hidden' }}
                                         >
                                             <label className={styles.modalLabel}>提醒发送时间</label>
-                                            <input
-                                                type="datetime-local"
+                                            <DatePicker
+                                                selected={activeReminderTask.reminderTime ? new Date(activeReminderTask.reminderTime) : null}
+                                                onChange={(date: Date | null) => setActiveReminderTask({ ...activeReminderTask, reminderTime: date ? date.toISOString() : undefined })}
+                                                showTimeSelect
+                                                timeFormat="HH:mm"
+                                                timeIntervals={15}
+                                                timeCaption="时间"
+                                                dateFormat="yyyy/MM/dd HH:mm"
+                                                minDate={new Date()}
+                                                locale="zh-CN"
+                                                placeholderText="选择时间"
                                                 className={styles.modalInput}
-                                                value={activeReminderTask.reminderTime ? new Date(activeReminderTask.reminderTime).toISOString().slice(0, 16) : ''}
-                                                onChange={e => setActiveReminderTask({ ...activeReminderTask, reminderTime: e.target.value })}
+                                                wrapperClassName={styles.datePickerWrapperModal}
                                             />
                                         </motion.div>
                                     )}
