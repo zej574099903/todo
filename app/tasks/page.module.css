@@ -247,8 +247,9 @@
     letter-spacing: -1px;
 }
 
-.pageTitle gradientText {
+.pageTitle .gradientText {
     background: linear-gradient(135deg, #ff9f43 0%, #ff6b81 100%);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -276,6 +277,58 @@
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     outline: none;
     font-weight: 500;
+}
+
+.manualDateWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    border-radius: 20px;
+    padding: 0 20px;
+    height: 76px;
+    /* Match input height */
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+    transition: all 0.3s ease;
+}
+
+.manualDateWrapper:hover {
+    border-color: rgba(255, 159, 67, 0.3);
+}
+
+.manualDateIcon {
+    margin-right: -24px;
+    z-index: 10;
+    font-size: 20px;
+    pointer-events: none;
+}
+
+.manualDateInput {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #2d3436;
+    font-size: 15px;
+    font-family: inherit;
+    font-weight: 600;
+    padding-left: 32px;
+    cursor: pointer;
+}
+
+/* Hide default calendar icon on webkit since we provided our own */
+.manualDateInput::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
 }
 
 .taskInput::placeholder {

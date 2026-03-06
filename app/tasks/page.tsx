@@ -29,6 +29,7 @@ export default function TasksDashboard() {
     // Advanced Features State
     const [isFocusMode, setIsFocusMode] = useState(false);
     const [nlpParsed, setNlpParsed] = useState<{ title: string, category: string | null, priority: string | null, dueDate: Date | null }>({ title: '', category: null, priority: null, dueDate: null });
+    const [manualDueDate, setManualDueDate] = useState('');
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -86,7 +87,8 @@ export default function TasksDashboard() {
     const [filterCategory, setFilterCategory] = useState('all');
 
     // Settings Modal State
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -211,7 +213,7 @@ export default function TasksDashboard() {
             } else {
                 setModalSuccess((t.tasks as any).settings?.success || "Password updated successfully!");
                 setTimeout(() => {
-                    setIsModalOpen(false);
+                    setIsPasswordModalOpen(false);
                     setCurrentPassword('');
                     setNewPassword('');
                     setConfirmPassword('');
@@ -238,7 +240,7 @@ export default function TasksDashboard() {
                         title: nlpParsed.title || title,
                         category: nlpParsed.category,
                         priority: nlpParsed.priority,
-                        dueDate: nlpParsed.dueDate
+                        dueDate: manualDueDate ? new Date(manualDueDate) : nlpParsed.dueDate
                     })
                 });
 
@@ -246,6 +248,7 @@ export default function TasksDashboard() {
                     const newTask = await res.json();
                     setTasks([newTask, ...tasks]);
                     setNewTaskTitle('');
+                    setManualDueDate('');
                     setFilterPriority('all');
                     setFilterCategory('all');
                 }
@@ -383,18 +386,22 @@ export default function TasksDashboard() {
 
                 <div className={styles.sidebarFooter}>
                     <button
-                        onClick={() => setIsModalOpen(true)}
                         className={styles.secondaryActionBtn}
+                        onClick={() => setIsEmailModalOpen(true)}
                     >
-                        <Settings size={18} />
-                        {(t.tasks as any).settings?.changePassword || "Account Settings"}
+                        <div className={styles.navItemIcon}><Settings size={18} /></div>
+                        <span>Email Reminders</span>
                     </button>
                     <button
-                        onClick={handleLogout}
-                        className={`${styles.secondaryActionBtn} ${styles.signOutBtn}`}
+                        className={styles.secondaryActionBtn}
+                        onClick={() => setIsPasswordModalOpen(true)}
                     >
-                        <LogOut size={18} />
-                        {t.tasks.signOut}
+                        <div className={styles.navItemIcon}><Settings size={18} /></div>
+                        <span>{(t.tasks as any).sidebar?.settings || "Settings"}</span>
+                    </button>
+                    <button className={`${styles.secondaryActionBtn} ${styles.signOutBtn}`} onClick={handleLogout}>
+                        <div className={styles.navItemIcon}><LogOut size={18} /></div>
+                        <span>{(t.tasks as any).sidebar?.logout || "Log Out"}</span>
                     </button>
                 </div>
             </motion.aside>
@@ -425,16 +432,29 @@ export default function TasksDashboard() {
                     transition={{ delay: 0.1 }}
                     className={styles.inputWrapper}
                 >
-                    <input
-                        type="text"
-                        className={styles.taskInput}
-                        placeholder={isAdding ? "Generating magic..." : "Press Enter to create a new task..."}
-                        value={newTaskTitle}
-                        onChange={(e) => setNewTaskTitle(e.target.value)}
-                        onKeyDown={addTask}
-                        disabled={isAdding}
-                        style={{ opacity: isAdding ? 0.7 : 1 }}
-                    />
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'transparent' }}>
+                        <input
+                            type="text"
+                            className={styles.taskInput}
+                            placeholder={isAdding ? "Generating magic..." : "Press Enter to create a new task..."}
+                            value={newTaskTitle}
+                            onChange={(e) => setNewTaskTitle(e.target.value)}
+                            onKeyDown={addTask}
+                            disabled={isAdding}
+                            style={{ opacity: isAdding ? 0.7 : 1, flex: 1 }}
+                        />
+
+                        <div className={styles.manualDateWrapper} title="手动设置到期时间 (用于准时提醒)">
+                            <div className={styles.manualDateIcon}>⏱️</div>
+                            <input
+                                type="datetime-local"
+                                className={styles.manualDateInput}
+                                value={manualDueDate}
+                                onChange={(e) => setManualDueDate(e.target.value)}
+                                disabled={isAdding}
+                            />
+                        </div>
+                    </div>
                     {isAdding && (
                         <div className={styles.inputSpinner}>
                             <Loader2 size={24} />
@@ -558,9 +578,9 @@ export default function TasksDashboard() {
                 </motion.div>
             </div>
 
-            {/* Glass Modal for Settings */}
+            {/* Glass Modal for Password Settings */}
             <AnimatePresence>
-                {isModalOpen && (
+                {isPasswordModalOpen && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -574,37 +594,7 @@ export default function TasksDashboard() {
                             transition={{ type: "spring", stiffness: 300, damping: 25 }}
                             className={styles.modal}
                         >
-                            <h2 className={styles.modalTitle}>⚙️ Account Settings</h2>
-
-                            {/* --- Email Reminder Section --- */}
-                            <div className={styles.modalSection}>
-                                <div className={styles.sectionDividerLabel}>📬 提醒邮箱</div>
-                                <p className={styles.sectionHint}>设置后，任务到期前 1 小时将自动发送邮件提醒</p>
-
-                                {emailError && <div className={styles.errorMessage}>{emailError}</div>}
-                                {emailSuccess && <div className={styles.successMessage}>{emailSuccess}</div>}
-
-                                <div className={styles.inputGroup}>
-                                    <label className={styles.modalLabel}>提醒邮箱</label>
-                                    <div style={{ display: 'flex', gap: '12px' }}>
-                                        <input
-                                            type="email"
-                                            className={styles.modalInput}
-                                            placeholder="your@email.com"
-                                            value={userEmail}
-                                            onChange={e => { setUserEmail(e.target.value); setEmailSuccess(''); setEmailError(''); }}
-                                        />
-                                        <button
-                                            className={`${styles.modalBtn} ${styles.modalBtnSave}`}
-                                            onClick={handleSaveEmail}
-                                            disabled={isEmailSaving}
-                                            style={{ minWidth: '80px', flexShrink: 0 }}
-                                        >
-                                            {isEmailSaving ? <Loader2 size={16} style={{ animation: 'taskLoaderSpin 1s linear infinite' }} /> : '保存'}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                            <h2 className={styles.modalTitle}>{(t.tasks as any).settings?.changePassword || "Change Password"}</h2>
 
                             {/* --- Password Section --- */}
                             <div className={styles.modalSection}>
@@ -647,7 +637,7 @@ export default function TasksDashboard() {
                                     <button
                                         className={`${styles.modalBtn} ${styles.modalBtnCancel}`}
                                         onClick={() => {
-                                            setIsModalOpen(false);
+                                            setIsPasswordModalOpen(false);
                                             setModalError('');
                                             setModalSuccess('');
                                             setCurrentPassword('');
@@ -665,6 +655,67 @@ export default function TasksDashboard() {
                                         {isSaving ? <Loader2 size={18} className={styles.inputSpinner} style={{ position: 'static', animation: 'taskLoaderSpin 1s linear infinite', margin: '0 auto' }} /> : ((t.tasks as any).settings?.save || "Save")}
                                     </button>
                                 </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Glass Modal for Email Settings */}
+            <AnimatePresence>
+                {isEmailModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className={styles.modalOverlay}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                            className={styles.modal}
+                        >
+                            <h2 className={styles.modalTitle}>📬 Email Reminders</h2>
+
+                            <div className={styles.modalSection}>
+                                <div className={styles.sectionDividerLabel}>设置提醒邮箱</div>
+                                <p className={styles.sectionHint}>设置后，只要任务设定了到期时间，系统会在到期前 1 小时自动发送邮件提醒您的任务。</p>
+
+                                {emailError && <div className={styles.errorMessage}>{emailError}</div>}
+                                {emailSuccess && <div className={styles.successMessage}>{emailSuccess}</div>}
+
+                                <div className={styles.inputGroup} style={{ marginTop: '12px' }}>
+                                    <label className={styles.modalLabel}>📧 您的邮箱</label>
+                                    <input
+                                        type="email"
+                                        className={styles.modalInput}
+                                        placeholder="your@email.com"
+                                        value={userEmail}
+                                        onChange={e => { setUserEmail(e.target.value); setEmailSuccess(''); setEmailError(''); }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className={styles.modalActions}>
+                                <button
+                                    className={`${styles.modalBtn} ${styles.modalBtnCancel}`}
+                                    onClick={() => {
+                                        setIsEmailModalOpen(false);
+                                        setEmailError('');
+                                        setEmailSuccess('');
+                                    }}
+                                >
+                                    {(t.tasks as any).settings?.cancel || "Cancel"}
+                                </button>
+                                <button
+                                    className={`${styles.modalBtn} ${styles.modalBtnSave}`}
+                                    onClick={handleSaveEmail}
+                                    disabled={isEmailSaving}
+                                >
+                                    {isEmailSaving ? <Loader2 size={18} className={styles.inputSpinner} style={{ position: 'static', animation: 'taskLoaderSpin 1s linear infinite', margin: '0 auto' }} /> : ((t.tasks as any).settings?.save || "Save")}
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>
