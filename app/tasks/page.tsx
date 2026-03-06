@@ -142,7 +142,7 @@ export default function TasksDashboard() {
         init();
     }, [router]);
 
-    // Polling background AI updates every 5 seconds
+    // Polling background AI updates every 5 seconds — merges AI data without overwriting user changes
     useEffect(() => {
         if (isLoading) return;
         const interval = setInterval(async () => {
@@ -150,7 +150,19 @@ export default function TasksDashboard() {
                 const res = await fetch('/api/tasks');
                 if (res.ok) {
                     const tasksData = await res.json();
-                    setTasks(tasksData);
+                    // Merge: trust server for most fields, but preserve local reminder state
+                    // to avoid race conditions where poll fires just after save.
+                    setTasks(prev => tasksData.map((serverTask: any) => {
+                        const localTask = prev.find(t => t._id === serverTask._id);
+                        if (!localTask) return serverTask;
+                        return {
+                            ...serverTask,
+                            // Preserve local reminder state to prevent UI blinking back to stale data 
+                            // before the PUT request from handleSaveTaskReminder finishes saving.
+                            isReminderEnabled: localTask.isReminderEnabled,
+                            reminderTime: localTask.reminderTime,
+                        };
+                    }));
                 }
             } catch (err) {
                 // Ignore silent errors for polling
@@ -188,10 +200,13 @@ export default function TasksDashboard() {
     };
 
     const handleSaveTaskReminder = async (taskId: string, isEnabled: boolean, time: string) => {
-        setTasks(tasks.map(t => t._id === taskId ? { ...t, isReminderEnabled: isEnabled, reminderTime: time } : t));
+        // Optimistic UI update
+        setTasks(prev => prev.map(t => t._id === taskId ? { ...t, isReminderEnabled: isEnabled, reminderTime: time } : t));
         setIsReminderModalOpen(false);
+        setActiveReminderTask(null);
+
         try {
-            await fetch(`/api/tasks/${taskId}`, {
+            const res = await fetch(`/api/tasks/${taskId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -199,6 +214,12 @@ export default function TasksDashboard() {
                     reminderTime: (isEnabled && time) ? new Date(time).toISOString() : null
                 })
             });
+
+            if (res.ok) {
+                const updatedTask = await res.json();
+                // Confirm with server truth
+                setTasks(prev => prev.map(t => t._id === taskId ? updatedTask : t));
+            }
         } catch (err) {
             console.error('Failed to update task reminder', err);
         }
