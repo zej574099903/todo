@@ -14,9 +14,9 @@ interface Task {
     completed: boolean;
     priority: 'high' | 'medium' | 'low' | 'none';
     category: string;
-    dueDate?: string;
+    dueDate?: string | Date;
     isReminderEnabled?: boolean;
-    reminderTime?: string;
+    reminderTime?: string | Date;
     aiAdvice?: string;
 }
 
@@ -31,7 +31,6 @@ export default function TasksDashboard() {
     // Advanced Features State
     const [isFocusMode, setIsFocusMode] = useState(false);
     const [nlpParsed, setNlpParsed] = useState<{ title: string, category: string | null, priority: string | null, dueDate: Date | null }>({ title: '', category: null, priority: null, dueDate: null });
-    const [manualDueDate, setManualDueDate] = useState('');
     const [isReminderEnabled, setIsReminderEnabled] = useState(false);
     const [reminderTime, setReminderTime] = useState('');
 
@@ -93,6 +92,8 @@ export default function TasksDashboard() {
     // Settings Modal State
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+    const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+    const [activeReminderTask, setActiveReminderTask] = useState<Task | null>(null);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -181,6 +182,23 @@ export default function TasksDashboard() {
         finally { setIsEmailSaving(false); }
     };
 
+    const handleSaveTaskReminder = async (taskId: string, isEnabled: boolean, time: string) => {
+        setTasks(tasks.map(t => t._id === taskId ? { ...t, isReminderEnabled: isEnabled, reminderTime: time } : t));
+        setIsReminderModalOpen(false);
+        try {
+            await fetch(`/api/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    isReminderEnabled: isEnabled,
+                    reminderTime: (isEnabled && time) ? new Date(time).toISOString() : null
+                })
+            });
+        } catch (err) {
+            console.error('Failed to update task reminder', err);
+        }
+    };
+
     const handleSavePassword = async () => {
         setModalError('');
         setModalSuccess('');
@@ -244,7 +262,7 @@ export default function TasksDashboard() {
                         title: nlpParsed.title || title,
                         category: nlpParsed.category,
                         priority: nlpParsed.priority,
-                        dueDate: manualDueDate ? new Date(manualDueDate) : nlpParsed.dueDate,
+                        dueDate: nlpParsed.dueDate,
                         isReminderEnabled: isReminderEnabled,
                         reminderTime: (isReminderEnabled && reminderTime) ? new Date(reminderTime) : null
                     })
@@ -254,7 +272,6 @@ export default function TasksDashboard() {
                     const newTask = await res.json();
                     setTasks([newTask, ...tasks]);
                     setNewTaskTitle('');
-                    setManualDueDate('');
                     setIsReminderEnabled(false);
                     setReminderTime('');
                     setFilterPriority('all');
@@ -452,17 +469,6 @@ export default function TasksDashboard() {
                             style={{ opacity: isAdding ? 0.7 : 1, flex: 1 }}
                         />
 
-                        <div className={styles.manualDateWrapper} title="手动设置到期时间">
-                            <div className={styles.manualDateIcon}>⏱️</div>
-                            <input
-                                type="datetime-local"
-                                className={styles.manualDateInput}
-                                value={manualDueDate}
-                                onChange={(e) => setManualDueDate(e.target.value)}
-                                disabled={isAdding}
-                            />
-                        </div>
-
                         {/* Reminder Settings */}
                         <div className={`${styles.reminderWrapper} ${isReminderEnabled ? styles.reminderActive : ''}`}>
                             <button
@@ -594,10 +600,24 @@ export default function TasksDashboard() {
                                                     <span className={styles.tag}>{task.category}</span>
                                                 )}
 
-                                                {task.isReminderEnabled && (
-                                                    <span className={styles.tag} title={task.reminderTime ? `Reminder set for ${new Date(task.reminderTime).toLocaleString()}` : 'Reminder enabled'}>
+                                                {task.isReminderEnabled ? (
+                                                    <button
+                                                        className={styles.tag}
+                                                        style={{ cursor: 'pointer', background: 'rgba(9, 132, 227, 0.1)', color: '#0984e3', border: 'none' }}
+                                                        title={task.reminderTime ? `Reminder set for ${new Date(task.reminderTime).toLocaleString()}` : 'Reminder enabled'}
+                                                        onClick={() => { setActiveReminderTask(task); setIsReminderModalOpen(true); }}
+                                                    >
                                                         🔔 提醒已开启
-                                                    </span>
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        className={styles.tag}
+                                                        style={{ cursor: 'pointer', background: 'rgba(223, 230, 233, 0.5)', color: '#636e72', border: 'none' }}
+                                                        title="设置任务提醒"
+                                                        onClick={() => { setActiveReminderTask(task); setIsReminderModalOpen(true); }}
+                                                    >
+                                                        🔕 设为提醒
+                                                    </button>
                                                 )}
                                             </div>
 
@@ -612,6 +632,85 @@ export default function TasksDashboard() {
                     </AnimatePresence>
                 </motion.div>
             </div>
+
+            {/* Glass Modal for Task Reminders */}
+            <AnimatePresence>
+                {isReminderModalOpen && activeReminderTask && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className={styles.modalOverlay}
+                        style={{ zIndex: 100 }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                            className={styles.modal}
+                        >
+                            <h2 className={styles.modalTitle}>🔔 设置任务提醒</h2>
+
+                            <div className={styles.modalSection}>
+                                <div className={styles.sectionDividerLabel}>{activeReminderTask.title}</div>
+                                <p className={styles.sectionHint}>开启后系统将在您设定的时间自动发送邮件提醒。</p>
+
+                                <div className={styles.inputGroup} style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                    <label className={styles.modalLabel} style={{ marginBottom: 0 }}>开启独立提醒</label>
+                                    <div
+                                        className={`${styles.checkbox} ${activeReminderTask.isReminderEnabled ? styles.completed : ''}`}
+                                        style={{ width: '24px', height: '24px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                        onClick={() => setActiveReminderTask({ ...activeReminderTask, isReminderEnabled: !activeReminderTask.isReminderEnabled })}
+                                    >
+                                        <motion.div initial={false} animate={{ scale: activeReminderTask.isReminderEnabled ? 1 : 0 }} transition={{ type: "spring", stiffness: 500, damping: 30 }}>
+                                            <Check size={14} color="#ffffff" strokeWidth={3} />
+                                        </motion.div>
+                                    </div>
+                                </div>
+
+                                <AnimatePresence>
+                                    {activeReminderTask.isReminderEnabled && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className={styles.inputGroup}
+                                            style={{ marginTop: '16px', overflow: 'hidden' }}
+                                        >
+                                            <label className={styles.modalLabel}>提醒发送时间</label>
+                                            <input
+                                                type="datetime-local"
+                                                className={styles.modalInput}
+                                                value={activeReminderTask.reminderTime ? new Date(activeReminderTask.reminderTime).toISOString().slice(0, 16) : ''}
+                                                onChange={e => setActiveReminderTask({ ...activeReminderTask, reminderTime: e.target.value })}
+                                            />
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+
+                            <div className={styles.modalActions}>
+                                <button
+                                    className={`${styles.modalBtn} ${styles.modalBtnCancel}`}
+                                    onClick={() => {
+                                        setIsReminderModalOpen(false);
+                                        setActiveReminderTask(null);
+                                    }}
+                                >
+                                    取消
+                                </button>
+                                <button
+                                    className={`${styles.modalBtn} ${styles.modalBtnSave}`}
+                                    onClick={() => handleSaveTaskReminder(activeReminderTask._id, activeReminderTask.isReminderEnabled || false, activeReminderTask.reminderTime as string || '')}
+                                >
+                                    保存设置
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Glass Modal for Password Settings */}
             <AnimatePresence>
