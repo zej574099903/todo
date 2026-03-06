@@ -15,6 +15,8 @@ interface Task {
     priority: 'high' | 'medium' | 'low' | 'none';
     category: string;
     dueDate?: string;
+    isReminderEnabled?: boolean;
+    reminderTime?: string;
     aiAdvice?: string;
 }
 
@@ -30,6 +32,8 @@ export default function TasksDashboard() {
     const [isFocusMode, setIsFocusMode] = useState(false);
     const [nlpParsed, setNlpParsed] = useState<{ title: string, category: string | null, priority: string | null, dueDate: Date | null }>({ title: '', category: null, priority: null, dueDate: null });
     const [manualDueDate, setManualDueDate] = useState('');
+    const [isReminderEnabled, setIsReminderEnabled] = useState(false);
+    const [reminderTime, setReminderTime] = useState('');
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -240,7 +244,9 @@ export default function TasksDashboard() {
                         title: nlpParsed.title || title,
                         category: nlpParsed.category,
                         priority: nlpParsed.priority,
-                        dueDate: manualDueDate ? new Date(manualDueDate) : nlpParsed.dueDate
+                        dueDate: manualDueDate ? new Date(manualDueDate) : nlpParsed.dueDate,
+                        isReminderEnabled: isReminderEnabled,
+                        reminderTime: (isReminderEnabled && reminderTime) ? new Date(reminderTime) : null
                     })
                 });
 
@@ -249,6 +255,8 @@ export default function TasksDashboard() {
                     setTasks([newTask, ...tasks]);
                     setNewTaskTitle('');
                     setManualDueDate('');
+                    setIsReminderEnabled(false);
+                    setReminderTime('');
                     setFilterPriority('all');
                     setFilterCategory('all');
                 }
@@ -444,7 +452,7 @@ export default function TasksDashboard() {
                             style={{ opacity: isAdding ? 0.7 : 1, flex: 1 }}
                         />
 
-                        <div className={styles.manualDateWrapper} title="手动设置到期时间 (用于准时提醒)">
+                        <div className={styles.manualDateWrapper} title="手动设置到期时间">
                             <div className={styles.manualDateIcon}>⏱️</div>
                             <input
                                 type="datetime-local"
@@ -453,6 +461,27 @@ export default function TasksDashboard() {
                                 onChange={(e) => setManualDueDate(e.target.value)}
                                 disabled={isAdding}
                             />
+                        </div>
+
+                        {/* Reminder Settings */}
+                        <div className={`${styles.reminderWrapper} ${isReminderEnabled ? styles.reminderActive : ''}`}>
+                            <button
+                                className={styles.reminderToggleBtn}
+                                onClick={() => setIsReminderEnabled(!isReminderEnabled)}
+                                title={isReminderEnabled ? "取消提醒" : "开启邮件提醒"}
+                            >
+                                {isReminderEnabled ? '🔔' : '🔕'}
+                            </button>
+                            {isReminderEnabled && (
+                                <input
+                                    type="datetime-local"
+                                    className={`${styles.manualDateInput} ${styles.reminderTimeInput}`}
+                                    value={reminderTime}
+                                    onChange={(e) => setReminderTime(e.target.value)}
+                                    disabled={isAdding}
+                                    title="选择提醒发送时间"
+                                />
+                            )}
                         </div>
                     </div>
                     {isAdding && (
@@ -563,6 +592,12 @@ export default function TasksDashboard() {
 
                                                 {task.category && task.category !== 'Uncategorized' && (
                                                     <span className={styles.tag}>{task.category}</span>
+                                                )}
+
+                                                {task.isReminderEnabled && (
+                                                    <span className={styles.tag} title={task.reminderTime ? `Reminder set for ${new Date(task.reminderTime).toLocaleString()}` : 'Reminder enabled'}>
+                                                        🔔 提醒已开启
+                                                    </span>
                                                 )}
                                             </div>
 

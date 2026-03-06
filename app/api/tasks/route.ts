@@ -34,7 +34,7 @@ export async function POST(request: Request) {
         const user = authenticate();
         if (!user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
 
-        const { title, category: reqCategory, priority: reqPriority, dueDate } = await request.json();
+        const { title, category: reqCategory, priority: reqPriority, dueDate, isReminderEnabled, reminderTime } = await request.json();
         if (!title || !title.trim()) {
             return NextResponse.json({ error: 'REQUIRED' }, { status: 400 });
         }
@@ -52,6 +52,8 @@ export async function POST(request: Request) {
             priority,
             category,
             dueDate: dueDate || null,
+            isReminderEnabled: isReminderEnabled || false,
+            reminderTime: reminderTime || null,
             aiAdvice
         });
 

@@ -24,9 +24,10 @@ export async function GET(request: Request) {
     const now = new Date();
     const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
 
-    // Find tasks: has a dueDate, not completed, no reminder sent yet, due within 1 hour
+    // Find tasks: reminds enabled, not completed, no reminder sent yet, reminder time within 1 hour
     const tasks = await (Task as any).find({
-        dueDate: { $gte: now, $lte: oneHourLater },
+        isReminderEnabled: true,
+        reminderTime: { $gte: now, $lte: oneHourLater },
         completed: false,
         reminderSentAt: null,
     });

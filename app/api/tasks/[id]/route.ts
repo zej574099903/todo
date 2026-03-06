@@ -21,12 +21,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         const user = authenticate();
         if (!user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
 
-        const { completed, title } = await request.json();
+        const { completed, title, isReminderEnabled, reminderTime } = await request.json();
 
         await dbConnect();
         const updateData: any = {};
         if (completed !== undefined) updateData.completed = completed;
         if (title) updateData.title = title;
+        if (isReminderEnabled !== undefined) updateData.isReminderEnabled = isReminderEnabled;
+        if (reminderTime !== undefined) updateData.reminderTime = reminderTime;
 
         const task = await (Task as any).findOneAndUpdate(
             { _id: params.id, userId: user.userId },

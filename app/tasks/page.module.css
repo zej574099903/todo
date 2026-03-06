@@ -331,6 +331,65 @@
     cursor: pointer;
 }
 
+.reminderWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    border-radius: 20px;
+    height: 76px;
+    padding: 0 10px;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+    width: 60px;
+    /* Default collapsed width for just the icon */
+    overflow: hidden;
+}
+
+.reminderActive {
+    border-color: rgba(9, 132, 227, 0.3);
+    width: auto;
+    /* Expand to fit input */
+    padding: 0 20px;
+}
+
+.reminderToggleBtn {
+    background: transparent;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.reminderToggleBtn:hover {
+    background: rgba(9, 132, 227, 0.1);
+    transform: scale(1.05);
+}
+
+.reminderTimeInput {
+    padding-left: 12px;
+    margin-left: 4px;
+    border-left: 1px solid rgba(0, 0, 0, 0.05);
+    opacity: 0;
+    animation: fadeIn 0.3s forwards 0.1s;
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+    }
+}
+
 .taskInput::placeholder {
     color: #b2bec3;
     font-weight: 500;
