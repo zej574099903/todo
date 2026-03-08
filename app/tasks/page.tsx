@@ -191,7 +191,7 @@ export default function TasksDashboard() {
                 body: JSON.stringify({ email: userEmail })
             });
             if (res.ok) {
-                setEmailSuccess('✅ 邮箱保存成功！到期前1小时会自动提醒您');
+                setEmailSuccess('✅ 邮箱保存成功！将按照您为每个任务独立设置的时间进行提醒');
             } else {
                 setEmailError('保存失败，请重试');
             }
